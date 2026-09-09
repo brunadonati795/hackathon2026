@@ -25,10 +25,8 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  void signIn(UserRole role) {
-    setState(
-      () => error = widget.state.signIn(contact.text, password.text, role),
-    );
+  void signIn() {
+    setState(() => error = widget.state.signIn(contact.text, password.text));
   }
 
   @override
@@ -84,7 +82,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 key: const Key('login-password'),
                 controller: password,
                 obscureText: hidePassword,
-                onSubmitted: (_) => signIn(UserRole.elder),
+                onSubmitted: (_) => signIn(),
                 decoration: InputDecoration(
                   hintText: 'Senha',
                   suffixIcon: IconButton(
@@ -112,28 +110,19 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ],
               const SizedBox(height: 28),
-              const Text(
-                'Escolha como deseja entrar',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 16),
               FilledButton(
                 key: const Key('sign-in-elder'),
-                style: FilledButton.styleFrom(backgroundColor: AppColors.green),
-                onPressed: () => signIn(UserRole.elder),
-                child: const Text('ENTRAR COMO IDOSO'),
-              ),
-              const SizedBox(height: 13),
-              FilledButton(
-                key: const Key('sign-in-caregiver'),
-                style: FilledButton.styleFrom(backgroundColor: AppColors.blue),
-                onPressed: () => signIn(UserRole.caregiver),
-                child: const Text('CUIDADOR / FAMILIAR'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.purple,
+                ),
+                onPressed: signIn,
+                child: const Text('ENTRAR NA MINHA CONTA'),
               ),
               const SizedBox(height: 20),
               const Text(
-                'Cada perfil abre uma experiência diferente.',
+                'O app detecta automaticamente se é idoso ou familiar.',
                 style: TextStyle(color: AppColors.muted, fontSize: 13),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 13),
               OutlinedButton(
@@ -160,12 +149,6 @@ class _AuthScreenState extends State<AuthScreen> {
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Teste: maria@cuidar.app ou romulo@cuidar.app • senha 123456',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11, color: AppColors.muted),
-              ),
             ],
           ),
         ),
@@ -191,6 +174,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? error;
 
   @override
+  void initState() {
+    super.initState();
+    _generateElderCodeIfNeeded();
+  }
+
+  void _generateElderCodeIfNeeded() {
+    if (role == UserRole.elder && keyWord.text.trim().isEmpty) {
+      keyWord.text = widget.state.generateUniqueLinkKey();
+    }
+  }
+
+  @override
   void dispose() {
     name.dispose();
     contact.dispose();
@@ -199,19 +194,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     super.dispose();
   }
 
-  void submit() {
-    final result = widget.state.createAccount(
+  Future<void> submit() async {
+    final result = await widget.state.createAccountAndSave(
       name: name.text,
       contact: contact.text,
       password: password.text,
       role: role,
       key: keyWord.text,
     );
+    if (!mounted) return;
     if (result != null) {
       setState(() => error = result);
       return;
     }
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    if (mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   @override
@@ -254,10 +252,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 onSelectionChanged: (value) => setState(() {
                   role = value.first;
                   error = null;
+                  if (role == UserRole.elder) {
+                    _generateElderCodeIfNeeded();
+                  } else {
+                    keyWord.clear();
+                  }
                 }),
               ),
               const SizedBox(height: 20),
               TextField(
+                key: const Key('register-name'),
                 controller: name,
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
@@ -266,6 +270,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
+                key: const Key('register-contact'),
                 controller: contact,
                 decoration: const InputDecoration(
                   labelText: 'E-mail ou telefone',
@@ -273,6 +278,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
+                key: const Key('register-password'),
                 controller: password,
                 obscureText: true,
                 decoration: const InputDecoration(
@@ -292,8 +298,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   children: [
                     Text(
                       role == UserRole.elder
-                          ? 'Crie sua palavra-chave'
-                          : 'Palavra-chave do idoso',
+                          ? 'Seu código automático de conexão'
+                          : 'Código do idoso',
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
@@ -302,19 +308,63 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     const SizedBox(height: 5),
                     Text(
                       role == UserRole.elder
-                          ? 'Diga esta palavra apenas ao familiar que cuidará dos seus lembretes.'
-                          : 'Digite a palavra que o idoso criou. Assim, as duas contas ficam ligadas.',
+                          ? 'Geramos um código automático para você. Basta passar esse código para o seu familiar.'
+                          : 'Digite o código automático gerado na conta do idoso para vincular.',
                       style: const TextStyle(color: AppColors.muted),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: keyWord,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        hintText: 'Ex.: MARIA2026',
-                        fillColor: Colors.white,
+                    if (role == UserRole.elder) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.purple,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Text(
+                                keyWord.text,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 2,
+                                  color: AppColors.purple,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filled(
+                            tooltip: 'Gerar outro código',
+                            onPressed: () {
+                              setState(() {
+                                keyWord.text = widget.state
+                                    .generateUniqueLinkKey();
+                              });
+                            },
+                            icon: const Icon(Icons.refresh),
+                          ),
+                        ],
                       ),
-                    ),
+                    ] else
+                      TextField(
+                        key: const Key('register-link-code'),
+                        controller: keyWord,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(
+                          hintText: 'Ex.: CD-8492 ou MARIA2026',
+                          fillColor: Colors.white,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -331,6 +381,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ],
               const SizedBox(height: 22),
               FilledButton(
+                key: const Key('register-submit'),
                 onPressed: submit,
                 child: const Text('CRIAR CONTA E CONTINUAR'),
               ),

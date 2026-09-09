@@ -30,6 +30,7 @@ class CareReminder {
     required this.type,
     required this.instructions,
     required this.createdBy,
+    this.elderKey,
     this.status = ReminderStatus.pending,
     this.isDaily = false,
   });
@@ -40,6 +41,29 @@ class CareReminder {
   final ReminderType type;
   final String instructions;
   final String createdBy;
+  final String? elderKey;
   ReminderStatus status;
   final bool isDaily;
+}
+
+class AppNotification {
+  AppNotification({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.timestamp,
+    required this.targetRole,
+    this.elderKey,
+    this.reminderId,
+    this.isRead = false,
+  });
+
+  final int id;
+  final String title;
+  final String message;
+  final DateTime timestamp;
+  final UserRole targetRole;
+  final String? elderKey;
+  final int? reminderId;
+  bool isRead;
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
+import 'notifications_screen.dart';
 import 'settings_screen.dart';
 
 class ElderHomeScreen extends StatelessWidget {
@@ -14,28 +15,73 @@ class ElderHomeScreen extends StatelessWidget {
     final pending = state.reminders
         .where((r) => r.status == ReminderStatus.pending)
         .toList();
-    final next = pending.isEmpty ? state.reminders.first : pending.first;
+    final next = pending.firstOrNull ?? state.reminders.firstOrNull;
     return Scaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(30, 16, 30, 22),
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton.filled(
-                key: const Key('settings-button'),
-                tooltip: 'Configurações e acessibilidade',
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppColors.muted,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Stack(
+                  children: [
+                    IconButton.filled(
+                      key: const Key('notifications-button'),
+                      tooltip: 'Notificações',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.muted,
+                      ),
+                      onPressed: () {
+                        state.markNotificationsAsRead();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => NotificationsScreen(state: state),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.notifications_outlined),
+                    ),
+                    if (state.unreadNotificationsCount > 0)
+                      Positioned(
+                        right: 3,
+                        top: 3,
+                        child: Container(
+                          key: const Key('notifications-badge'),
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: AppColors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${state.unreadNotificationsCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SettingsScreen(state: state),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  key: const Key('settings-button'),
+                  tooltip: 'Configurações e acessibilidade',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.muted,
                   ),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SettingsScreen(state: state),
+                    ),
+                  ),
+                  icon: const Icon(Icons.settings_outlined),
                 ),
-                icon: const Icon(Icons.settings_outlined),
-              ),
+              ],
             ),
             const SizedBox(height: 2),
             Text(
@@ -49,20 +95,48 @@ class ElderHomeScreen extends StatelessWidget {
               style: TextStyle(fontSize: 17),
             ),
             const SizedBox(height: 23),
-            _HomeAction(
-              key: const Key('next-reminder'),
-              color: const Color(0xFFD5EBFF),
-              iconColor: const Color(0xFF68A9ED),
-              icon: _letterFor(next.type),
-              eyebrow: 'Próximo aviso',
-              title: '${next.title}\nàs ${next.time}',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      ReminderDetailScreen(state: state, reminder: next),
+            if (next != null)
+              _HomeAction(
+                key: const Key('next-reminder'),
+                color: const Color(0xFFD5EBFF),
+                iconColor: const Color(0xFF68A9ED),
+                icon: _letterFor(next.type),
+                eyebrow: 'Próximo aviso',
+                title: '${next.title}\nàs ${next.time}',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ReminderDetailScreen(state: state, reminder: next),
+                  ),
+                ),
+              )
+            else
+              Container(
+                key: const Key('empty-reminders'),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD5EBFF),
+                  borderRadius: BorderRadius.circular(17),
+                ),
+                child: const Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Color(0xFF68A9ED),
+                      child: Icon(Icons.check, color: Colors.white),
+                    ),
+                    SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        'Nenhum aviso por enquanto',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
             const SizedBox(height: 14),
             _HomeAction(
               color: const Color(0xFFF8D5E3),
@@ -83,6 +157,63 @@ class ElderHomeScreen extends StatelessWidget {
               title: 'Falar com familiar',
               onTap: () => _callDialog(context),
             ),
+            if (state.currentAccount?.linkKey != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.purple, width: 2),
+                ),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Color(0xFFEFEAFF),
+                      child: Icon(Icons.key, color: AppColors.purple),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Seu Código de Conexão',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.muted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            state.currentAccount!.linkKey!,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2,
+                              color: AppColors.purple,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Copiar código',
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Código ${state.currentAccount!.linkKey!} copiado!',
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.copy, color: AppColors.purple),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
             _AccessibilityCard(state: state),
             const SizedBox(height: 30),
@@ -109,21 +240,31 @@ class ElderHomeScreen extends StatelessWidget {
   };
 
   void _callDialog(BuildContext context) {
+    final caregiverName = state.linkedCaregiverName;
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
         icon: const Icon(Icons.phone_in_talk, size: 42, color: AppColors.green),
-        title: const Text('Ligar para Rômulo?'),
-        content: const Text('Ele é o familiar ligado à sua conta.'),
+        title: Text(
+          caregiverName == null
+              ? 'Nenhum familiar conectado'
+              : 'Ligar para $caregiverName?',
+        ),
+        content: Text(
+          caregiverName == null
+              ? 'Compartilhe seu Código de Conexão para vincular um familiar.'
+              : '$caregiverName é o familiar ligado à sua conta.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('AGORA NÃO'),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('LIGAR'),
-          ),
+          if (caregiverName != null)
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('LIGAR'),
+            ),
         ],
       ),
     );
@@ -210,79 +351,131 @@ class _AccessibilityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Acessibilidade',
-            style: TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-              color: AppColors.purple,
-            ),
+    return AnimatedBuilder(
+      animation: state,
+      builder: (context, _) {
+        final scaleOptions = [
+          (1.0, 'Normal'),
+          (1.25, 'Grande'),
+          (1.50, 'M. Grande'),
+          (1.75, 'Gigante'),
+        ];
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border),
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'Tamanho do texto',
-            style: TextStyle(
-              color: AppColors.muted,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => state.setTextScale(.9),
-                  child: const Text('A−'),
+              const Text(
+                'Acessibilidade',
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.purple,
                 ),
               ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => state.setTextScale(1),
-                  child: const Text('100%'),
-                ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Tamanho do texto',
+                    style: TextStyle(
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '${(state.textScale * 100).round()}%',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.purple,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => state.setTextScale(1.18),
-                  child: const Text('A+'),
-                ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: scaleOptions.map((opt) {
+                  final selected = (state.textScale - opt.$1).abs() < 0.05;
+                  return SizedBox(
+                    width: (MediaQuery.of(context).size.width - 120) / 2,
+                    child: selected
+                        ? FilledButton(
+                            key: Key('scale-${opt.$1}'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(42),
+                              padding: EdgeInsets.zero,
+                            ),
+                            onPressed: () => state.setTextScale(opt.$1),
+                            child: Text(
+                              opt.$2,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          )
+                        : OutlinedButton(
+                            key: Key('scale-${opt.$1}'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(42),
+                              padding: EdgeInsets.zero,
+                            ),
+                            onPressed: () => state.setTextScale(opt.$1),
+                            child: Text(
+                              opt.$2,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 13),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Brilho da tela',
+                    style: TextStyle(
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '${(state.brightness * 100).round()}%',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.purple,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.light_mode_outlined,
+                    color: Color(0xFFF2B526),
+                  ),
+                  Expanded(
+                    child: Slider(
+                      min: 0.3,
+                      max: 1.0,
+                      value: state.brightness,
+                      onChanged: state.setBrightness,
+                    ),
+                  ),
+                  const Icon(Icons.light_mode, color: Color(0xFFF2B526)),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 13),
-          const Text(
-            'Brilho da tela',
-            style: TextStyle(
-              color: AppColors.muted,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Row(
-            children: [
-              const Icon(Icons.light_mode_outlined, color: Color(0xFFF2B526)),
-              Expanded(
-                child: Slider(
-                  value: state.brightness,
-                  onChanged: state.setBrightness,
-                ),
-              ),
-              const Icon(Icons.light_mode, color: Color(0xFFF2B526)),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

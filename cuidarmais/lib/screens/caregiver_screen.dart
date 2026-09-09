@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
+import 'notifications_screen.dart';
 import 'settings_screen.dart';
 
 class CaregiverHomeScreen extends StatelessWidget {
@@ -34,6 +35,42 @@ class CaregiverHomeScreen extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
+                Stack(
+                  children: [
+                    IconButton(
+                      tooltip: 'Notificações',
+                      onPressed: () {
+                        state.markNotificationsAsRead();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => NotificationsScreen(state: state),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.notifications_outlined),
+                    ),
+                    if (state.unreadNotificationsCount > 0)
+                      Positioned(
+                        right: 6,
+                        top: 6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: AppColors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${state.unreadNotificationsCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 IconButton(
                   tooltip: 'Configurações',
                   onPressed: () => Navigator.of(context).push(
@@ -185,12 +222,7 @@ class _ReminderTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(13),
-        border: Border(
-          left: BorderSide(color: color, width: 5),
-          top: const BorderSide(color: AppColors.border),
-          right: const BorderSide(color: AppColors.border),
-          bottom: const BorderSide(color: AppColors.border),
-        ),
+        border: Border.all(color: color, width: 2),
       ),
       child: Row(
         children: [
@@ -302,7 +334,7 @@ class _NewReminderScreenState extends State<NewReminderScreen> {
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
         children: [
           const Text(
-            'O idoso receberá apenas o aviso.',
+            'O lembrete aparecerá para você e será compartilhado com o idoso.',
             style: TextStyle(color: AppColors.muted),
           ),
           const SizedBox(height: 20),
