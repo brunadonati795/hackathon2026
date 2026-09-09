@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_storage.dart';
 import 'app_state.dart';
 import 'models.dart';
+import 'notification_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/caregiver_screen.dart';
 import 'screens/elder_screen.dart';
@@ -10,7 +11,12 @@ import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final state = AppState(storage: SharedPreferencesAppStorage());
+  final notificationService = LocalNotificationService();
+  await notificationService.initialize();
+  final state = AppState(
+    storage: SharedPreferencesAppStorage(),
+    notificationScheduler: notificationService,
+  );
   await state.initialize();
   runApp(MyApp(state: state));
 }

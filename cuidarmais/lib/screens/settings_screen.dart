@@ -117,6 +117,35 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _section(
                 context,
+                title: 'Notificações no celular',
+                children: [
+                  const Text(
+                    'Permita os avisos e envie um teste para confirmar que som e alertas estão ativos.',
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    key: const Key('test-notification'),
+                    onPressed: () async {
+                      final sent = await state.showTestNotification();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            sent
+                                ? 'Notificação de teste enviada.'
+                                : 'Permita as notificações nas configurações do celular.',
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.notifications_active_outlined),
+                    label: const Text('TESTAR NOTIFICAÇÃO'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _section(
+                context,
                 title: 'Minha conta',
                 children: [
                   ListTile(

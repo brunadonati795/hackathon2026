@@ -1,6 +1,7 @@
 import 'package:cuidarmais/app_storage.dart';
 import 'package:cuidarmais/app_state.dart';
 import 'package:cuidarmais/models.dart';
+import 'package:cuidarmais/notification_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -180,6 +181,24 @@ void main() {
     expect(state.notificationsForCurrentRole.single.title, 'Novo lembrete');
   });
 
+  test('creating a reminder schedules the phone notification', () {
+    final scheduler = _RecordingNotificationScheduler();
+    final state = AppState(notificationScheduler: scheduler);
+    state.signIn('romulo@cuidar.app', '123456');
+
+    state.addReminder(
+      title: 'Tomar vitamina',
+      time: '18:30',
+      type: ReminderType.medicine,
+      instructions: 'Depois do jantar',
+      isDaily: true,
+    );
+
+    expect(scheduler.scheduled.single.title, 'Tomar vitamina');
+    expect(scheduler.scheduled.single.time, '18:30');
+    expect(scheduler.scheduled.single.isDaily, isTrue);
+  });
+
   test('accessibility settings state updates correctly', () {
     final state = AppState();
 
@@ -256,4 +275,28 @@ class _MemoryStorage implements AppStorage {
   Future<void> write(String value) async {
     this.value = value;
   }
+}
+
+class _RecordingNotificationScheduler implements ReminderNotificationScheduler {
+  final List<CareReminder> scheduled = [];
+
+  @override
+  Future<void> schedule(CareReminder reminder) async {
+    scheduled.add(reminder);
+  }
+
+  @override
+  Future<void> cancel(int reminderId) async {}
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<bool> requestPermissions() async => true;
+
+  @override
+  Future<void> rescheduleAll(Iterable<CareReminder> reminders) async {}
+
+  @override
+  Future<bool> showTestNotification() async => true;
 }

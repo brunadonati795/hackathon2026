@@ -5,13 +5,15 @@ import 'package:flutter/foundation.dart';
 
 import 'app_storage.dart';
 import 'models.dart';
+import 'notification_service.dart';
 
 class AppState extends ChangeNotifier {
-  AppState({this.storage}) {
+  AppState({this.storage, this.notificationScheduler}) {
     _seedDemoData();
   }
 
   final AppStorage? storage;
+  final ReminderNotificationScheduler? notificationScheduler;
   Future<void> _pendingSave = Future<void>.value();
   bool _initialized = false;
 
@@ -112,6 +114,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> flushPersistence() => _pendingSave;
+
+  Future<bool> showTestNotification() async {
+    return await notificationScheduler?.showTestNotification() ?? false;
+  }
 
   void _changed() {
     notifyListeners();
@@ -472,6 +478,10 @@ class AppState extends ChangeNotifier {
       ),
     );
 
+    final scheduler = notificationScheduler;
+    if (scheduler != null) {
+      unawaited(scheduler.schedule(newReminder));
+    }
     _changed();
   }
 
@@ -490,6 +500,10 @@ class AppState extends ChangeNotifier {
         reminderId: reminder.id,
       ),
     );
+    if (!reminder.isDaily) {
+      final scheduler = notificationScheduler;
+      if (scheduler != null) unawaited(scheduler.cancel(reminder.id));
+    }
     _changed();
   }
 
@@ -524,6 +538,10 @@ class AppState extends ChangeNotifier {
         reminderId: reminder.id,
       ),
     );
+    if (!reminder.isDaily) {
+      final scheduler = notificationScheduler;
+      if (scheduler != null) unawaited(scheduler.cancel(reminder.id));
+    }
     _changed();
   }
 
