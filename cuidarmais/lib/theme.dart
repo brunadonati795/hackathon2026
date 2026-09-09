@@ -18,7 +18,7 @@ ThemeData buildTheme({required bool highContrast, required double brightness}) {
   final primaryTextColor = highContrast ? Colors.black : AppColors.ink;
   final secondaryTextColor = highContrast
       ? const Color(0xFF222222)
-      : AppColors.muted;
+      : Colors.black;
   final borderColor = highContrast ? Colors.black : AppColors.border;
 
   return ThemeData(
