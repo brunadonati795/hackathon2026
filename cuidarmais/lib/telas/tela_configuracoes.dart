@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../app_state.dart';
-import '../theme.dart';
+import '../estado_app.dart';
+import '../tema.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.state});

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import 'app_storage.dart';
-import 'app_state.dart';
+import 'armazenamento_app.dart';
+import 'estado_app.dart';
 import 'models.dart';
-import 'notification_service.dart';
-import 'screens/auth_screen.dart';
-import 'screens/caregiver_screen.dart';
-import 'screens/elder_screen.dart';
-import 'theme.dart';
+import 'servico_notificacoes.dart';
+import 'telas/tela_autenticacao.dart';
+import 'telas/tela_cuidador.dart';
+import 'telas/tela_idoso.dart';
+import 'tema.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -65,6 +65,11 @@ class LocalNotificationService implements ReminderNotificationScheduler {
         requestBadgePermission: false,
         requestSoundPermission: false,
       ),
+      windows: WindowsInitializationSettings(
+        appName: 'Cuidar+',
+        appUserModelId: 'IFC.Concordia.CuidarMais',
+        guid: '2f37e647-74a6-4d14-a9ed-9a848b9fdc0c',
+      ),
     );
     await _plugin.initialize(
       settings: settings,

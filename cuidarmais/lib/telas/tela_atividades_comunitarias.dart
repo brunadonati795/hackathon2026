@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../app_state.dart';
-import '../community_activity_data.dart';
+import '../dados_atividades_comunitarias.dart';
+import '../estado_app.dart';
 import '../models.dart';
-import '../theme.dart';
+import '../tema.dart';
 
 class CommunityActivitiesScreen extends StatelessWidget {
   const CommunityActivitiesScreen({super.key, required this.state});

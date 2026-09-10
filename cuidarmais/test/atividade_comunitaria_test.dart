@@ -1,5 +1,5 @@
-import 'package:cuidarmais/app_state.dart';
-import 'package:cuidarmais/app_storage.dart';
+import 'package:cuidarmais/armazenamento_app.dart';
+import 'package:cuidarmais/estado_app.dart';
 import 'package:cuidarmais/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 

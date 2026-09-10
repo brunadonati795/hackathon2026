@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../app_state.dart';
+import '../estado_app.dart';
 import '../models.dart';
-import '../theme.dart';
-import 'community_activities_screen.dart';
-import 'notifications_screen.dart';
-import 'reminder_media_widgets.dart';
-import 'settings_screen.dart';
+import '../tema.dart';
+import 'componentes_midia_lembrete.dart';
+import 'tela_atividades_comunitarias.dart';
+import 'tela_configuracoes.dart';
+import 'tela_notificacoes.dart';
 
 class ElderHomeScreen extends StatelessWidget {
   const ElderHomeScreen({super.key, required this.state});

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cuidarmais/app_state.dart';
+import 'package:cuidarmais/estado_app.dart';
 import 'package:cuidarmais/main.dart';
 import 'package:cuidarmais/models.dart';
-import 'package:cuidarmais/screens/community_activities_screen.dart';
-import 'package:cuidarmais/screens/elder_screen.dart';
-import 'package:cuidarmais/screens/settings_screen.dart';
-import 'package:cuidarmais/theme.dart';
+import 'package:cuidarmais/telas/tela_atividades_comunitarias.dart';
+import 'package:cuidarmais/telas/tela_configuracoes.dart';
+import 'package:cuidarmais/telas/tela_idoso.dart';
+import 'package:cuidarmais/tema.dart';
 
 void main() {
   testWidgets('login screen has single entry button', (tester) async {

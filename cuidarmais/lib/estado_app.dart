@@ -3,9 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
-import 'app_storage.dart';
+import 'armazenamento_app.dart';
 import 'models.dart';
-import 'notification_service.dart';
+import 'servico_notificacoes.dart';
 
 class AppState extends ChangeNotifier {
   AppState({

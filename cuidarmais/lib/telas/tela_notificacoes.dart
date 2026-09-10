@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../app_state.dart';
-import '../theme.dart';
+import '../estado_app.dart';
+import '../tema.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key, required this.state});

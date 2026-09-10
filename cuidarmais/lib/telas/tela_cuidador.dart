@@ -3,14 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../app_state.dart';
+import '../estado_app.dart';
 import '../models.dart';
-import '../reminder_media_service.dart';
-import '../theme.dart';
-import 'community_activities_screen.dart';
-import 'notifications_screen.dart';
-import 'reminder_media_widgets.dart';
-import 'settings_screen.dart';
+import '../servico_midia_lembrete.dart';
+import '../tema.dart';
+import 'componentes_midia_lembrete.dart';
+import 'tela_atividades_comunitarias.dart';
+import 'tela_configuracoes.dart';
+import 'tela_notificacoes.dart';
 
 class CaregiverHomeScreen extends StatelessWidget {
   const CaregiverHomeScreen({super.key, required this.state});

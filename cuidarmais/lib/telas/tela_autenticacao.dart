@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../app_state.dart';
+import '../estado_app.dart';
 import '../models.dart';
-import '../theme.dart';
-import 'community_activities_screen.dart';
+import '../tema.dart';
+import 'tela_atividades_comunitarias.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key, required this.state});

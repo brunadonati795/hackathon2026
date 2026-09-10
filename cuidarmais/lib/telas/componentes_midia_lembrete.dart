@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../theme.dart';
+import '../tema.dart';
 
 class ReminderPhotoAttachment extends StatelessWidget {
   const ReminderPhotoAttachment({super.key, required this.path, this.onRemove});
