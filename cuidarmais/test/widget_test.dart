@@ -4,13 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cuidarmais/app_state.dart';
 import 'package:cuidarmais/main.dart';
 import 'package:cuidarmais/models.dart';
+import 'package:cuidarmais/screens/elder_screen.dart';
 import 'package:cuidarmais/screens/settings_screen.dart';
 import 'package:cuidarmais/theme.dart';
 
 void main() {
   testWidgets('login screen has single entry button', (tester) async {
     await tester.pumpWidget(const MyApp());
-    expect(find.text('Cuidar+'), findsOneWidget);
+    expect(find.byKey(const Key('app-logo')), findsOneWidget);
     expect(find.text('ENTRAR NA MINHA CONTA'), findsOneWidget);
     expect(find.byKey(const Key('create-account')), findsOneWidget);
   });
@@ -28,9 +29,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Olá, Maria!'), findsOneWidget);
       expect(find.text('Falar com familiar'), findsOneWidget);
+      expect(find.byKey(const Key('settings-button')), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -420));
+      await tester.pumpAndSettle();
       expect(find.text('Seu Código de Conexão'), findsOneWidget);
       expect(find.text('MARIA2026'), findsOneWidget);
-      expect(find.byKey(const Key('settings-button')), findsOneWidget);
     },
   );
 
@@ -59,6 +62,23 @@ void main() {
     expect(state.unreadNotificationsCount, 0);
   });
 
+  testWidgets('tapping a system notification opens its reminder details', (
+    tester,
+  ) async {
+    final state = AppState();
+    state.signIn('maria@cuidar.app', '123456');
+    final notificationSelection = ValueNotifier<int?>(null);
+    await tester.pumpWidget(
+      MyApp(state: state, notificationSelection: notificationSelection),
+    );
+
+    notificationSelection.value = 1;
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReminderDetailScreen), findsOneWidget);
+    expect(find.text('Losartana'), findsOneWidget);
+  });
+
   testWidgets('caregiver sees a reminder immediately after creating it', (
     tester,
   ) async {
@@ -71,22 +91,41 @@ void main() {
       250,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.byKey(const Key('add-reminder')));
+    final addReminderButton = tester.widget<FilledButton>(
+      find.byKey(const Key('add-reminder')),
+    );
+    addReminderButton.onPressed!();
     await tester.pumpAndSettle();
+    await tester.tap(find.text('OUTRO'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('custom-reminder-type')),
+      'Passeio',
+    );
     await tester.enterText(
       find.byKey(const Key('reminder-title')),
       'Fazer caminhada',
     );
+    await tester.drag(find.byType(ListView).last, const Offset(0, -420));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('alert-mode-alarm')), findsOneWidget);
+    expect(find.byKey(const Key('alert-mode-notification')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('alert-mode-notification')));
     await tester.scrollUntilVisible(
       find.byKey(const Key('save-reminder')),
       250,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.byKey(const Key('save-reminder')));
+    final saveReminderButton = tester.widget<FilledButton>(
+      find.byKey(const Key('save-reminder')),
+    );
+    saveReminderButton.onPressed!();
     await tester.pumpAndSettle();
 
     expect(find.text('Fazer caminhada'), findsOneWidget);
     expect(state.notificationsForCurrentRole.first.title, 'Lembrete criado');
+    expect(state.reminders.first.typeLabel, 'Passeio');
+    expect(state.reminders.first.alertMode, ReminderAlertMode.notification);
   });
 
   testWidgets('registration screen auto-generates connection code for elder', (

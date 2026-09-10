@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'notifications_screen.dart';
+import 'reminder_media_widgets.dart';
 import 'settings_screen.dart';
 
 class ElderHomeScreen extends StatelessWidget {
@@ -17,6 +18,7 @@ class ElderHomeScreen extends StatelessWidget {
         .toList();
 
     final next = pending.firstOrNull ?? state.reminders.firstOrNull;
+    final todayLabel = _formatDate(DateTime.now());
 
     return MediaQuery(
       data: MediaQuery.of(
@@ -108,9 +110,12 @@ class ElderHomeScreen extends StatelessWidget {
 
               const SizedBox(height: 4),
 
-              const Text(
-                'quarta-feira, 9 de setembro',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              Text(
+                todayLabel,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
 
               const SizedBox(height: 23),
@@ -122,7 +127,7 @@ class ElderHomeScreen extends StatelessWidget {
                   iconColor: const Color(0xFF2678C9),
                   icon: _letterFor(next.type),
                   eyebrow: 'Próximo aviso',
-                  title: '${next.title}\nàs ${next.time}',
+                  title: '${next.title}\n${next.formattedDate} às ${next.time}',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) =>
@@ -282,7 +287,35 @@ class ElderHomeScreen extends StatelessWidget {
     ReminderType.appointment => 'C',
     ReminderType.activity => 'A',
     ReminderType.meal => 'M',
+    ReminderType.other => 'O',
   };
+
+  static String _formatDate(DateTime date) {
+    const weekdays = [
+      'segunda-feira',
+      'terça-feira',
+      'quarta-feira',
+      'quinta-feira',
+      'sexta-feira',
+      'sábado',
+      'domingo',
+    ];
+    const months = [
+      'janeiro',
+      'fevereiro',
+      'março',
+      'abril',
+      'maio',
+      'junho',
+      'julho',
+      'agosto',
+      'setembro',
+      'outubro',
+      'novembro',
+      'dezembro',
+    ];
+    return '${weekdays[date.weekday - 1]}, ${date.day} de ${months[date.month - 1]}';
+  }
 
   void _callDialog(BuildContext context) {
     final caregiverName = state.linkedCaregiverName;
@@ -439,14 +472,17 @@ class _AccessibilityCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Tamanho do texto',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
+                  const Expanded(
+                    child: Text(
+                      'Tamanho do texto',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     '${(state.textScale * 100).round()}%',
                     style: const TextStyle(
@@ -596,7 +632,7 @@ class CommitmentsScreen extends StatelessWidget {
                 ),
 
                 subtitle: Text(
-                  '${reminder.time} • ${reminder.instructions}',
+                  '${reminder.formattedDate} às ${reminder.time} • ${reminder.instructions}',
                   style: const TextStyle(fontSize: 16),
                 ),
 
@@ -630,19 +666,17 @@ class ReminderDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final done = reminder.status == ReminderStatus.confirmed;
-
     return MediaQuery(
       data: MediaQuery.of(
         context,
       ).copyWith(textScaler: TextScaler.linear(state.textScale)),
       child: Scaffold(
         appBar: AppBar(backgroundColor: Colors.transparent),
-        body: Padding(
+        body: ListView(
           padding: const EdgeInsets.fromLTRB(28, 10, 28, 30),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              CircleAvatar(
+          children: [
+            Center(
+              child: CircleAvatar(
                 radius: 44,
                 backgroundColor: done
                     ? const Color(0xFFDDF3E7)
@@ -653,115 +687,103 @@ class ReminderDetailScreen extends StatelessWidget {
                   color: done ? AppColors.green : AppColors.purple,
                 ),
               ),
-
-              const SizedBox(height: 24),
-
-              Text(
-                done ? 'Tudo certo!' : 'Está na hora',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineLarge,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              done ? 'Tudo certo!' : 'Está na hora',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineLarge,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              reminder.title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            Text(
+              '${reminder.formattedDate} às ${reminder.time}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 23,
+                color: AppColors.purple,
+                fontWeight: FontWeight.w800,
               ),
-
-              const SizedBox(height: 10),
-
-              Text(
-                reminder.title,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-
-              Text(
-                'às ${reminder.time}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 23,
-                  color: AppColors.purple,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Text(
-                  reminder.instructions,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 19),
-                ),
-              ),
-
-              const Spacer(),
-
-              if (!done) ...[
-                SizedBox(
-                  height: 56,
-                  child: FilledButton.icon(
-                    key: const Key('confirm-reminder'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.green,
-                    ),
-                    onPressed: () {
-                      state.confirm(reminder);
-                      Navigator.pop(context);
-                    },
-                    icon: const Icon(Icons.check),
-                    label: const Text(
-                      'JÁ FIZ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                SizedBox(
-                  height: 56,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      state.postpone(reminder);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Tudo bem. Vamos lembrar você de novo em 10 minutos.',
-                          ),
-                        ),
-                      );
-                      Navigator.pop(context);
-                    },
-                    child: const Text(
-                      'LEMBRAR DE NOVO',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ] else
-                SizedBox(
-                  height: 56,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'VOLTAR PARA O INÍCIO',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
+            ),
+            const SizedBox(height: 22),
+            if (reminder.photoPath != null) ...[
+              ReminderPhotoAttachment(path: reminder.photoPath!),
+              const SizedBox(height: 14),
             ],
-          ),
+            if (reminder.audioPath != null) ...[
+              ReminderAudioAttachment(path: reminder.audioPath!),
+              const SizedBox(height: 14),
+            ],
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Text(
+                reminder.instructions,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 19),
+              ),
+            ),
+            const SizedBox(height: 32),
+            if (!done) ...[
+              SizedBox(
+                height: 56,
+                child: FilledButton.icon(
+                  key: const Key('confirm-reminder'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.green,
+                  ),
+                  onPressed: () {
+                    state.confirm(reminder);
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.check),
+                  label: const Text(
+                    'JÁ FIZ',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 56,
+                child: OutlinedButton(
+                  onPressed: () {
+                    state.postpone(reminder);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Tudo bem. Vamos lembrar você de novo em 10 minutos.',
+                        ),
+                      ),
+                    );
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'LEMBRAR DE NOVO',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ] else
+              SizedBox(
+                height: 56,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'VOLTAR PARA O INÍCIO',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

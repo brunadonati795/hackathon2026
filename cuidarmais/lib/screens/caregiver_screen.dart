@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../app_state.dart';
 import '../models.dart';
+import '../reminder_media_service.dart';
 import '../theme.dart';
 import 'notifications_screen.dart';
+import 'reminder_media_widgets.dart';
 import 'settings_screen.dart';
 
 class CaregiverHomeScreen extends StatelessWidget {
@@ -124,7 +129,7 @@ class CaregiverHomeScreen extends StatelessWidget {
                         ),
                         Text(
                           delayed.isEmpty
-                              ? 'Última confirmação: 08:03'
+                              ? 'Nenhum lembrete atrasado.'
                               : 'Veja o que ainda não foi confirmado.',
                           style: const TextStyle(
                             fontSize: 13,
@@ -253,9 +258,29 @@ class _ReminderTile extends StatelessWidget {
                   style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
                 Text(
-                  reminder.time,
+                  '${reminder.typeLabel} • ${reminder.alertModeLabel}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.muted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  '${reminder.formattedDate} • ${reminder.time}',
                   style: TextStyle(fontWeight: FontWeight.w800, color: color),
                 ),
+                if (reminder.photoPath != null || reminder.audioPath != null)
+                  Text(
+                    [
+                      if (reminder.photoPath != null) 'Foto',
+                      if (reminder.audioPath != null) 'Áudio',
+                    ].join(' • '),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.purple,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -291,24 +316,125 @@ class NewReminderScreen extends StatefulWidget {
 class _NewReminderScreenState extends State<NewReminderScreen> {
   final title = TextEditingController();
   final instructions = TextEditingController();
+  final customType = TextEditingController();
+  final media = ReminderMediaService();
   ReminderType type = ReminderType.medicine;
+  ReminderAlertMode alertMode = ReminderAlertMode.alarm;
   TimeOfDay time = const TimeOfDay(hour: 8, minute: 0);
+  DateTime date = DateUtils.dateOnly(DateTime.now());
   bool daily = true;
+  bool recording = false;
+  String? photoPath;
+  String? audioPath;
   String? error;
 
   @override
   void dispose() {
     title.dispose();
     instructions.dispose();
+    customType.dispose();
+    if (recording) {
+      unawaited(media.cancelRecording().whenComplete(media.dispose));
+    } else {
+      media.dispose();
+    }
     super.dispose();
   }
 
   String get formattedTime =>
       '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
 
+  String get formattedDate =>
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+  DateTime get scheduledAt =>
+      DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+  Future<void> chooseDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: date,
+      firstDate: DateUtils.dateOnly(DateTime.now()),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
+      helpText: 'Escolha o dia do lembrete',
+    );
+    if (selected != null && mounted) setState(() => date = selected);
+  }
+
+  Future<void> choosePhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tirar foto'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Escolher da galeria'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    try {
+      final selectedPath = await media.pickPhoto(source);
+      if (selectedPath != null && mounted) {
+        setState(() => photoPath = selectedPath);
+      }
+    } on Object {
+      if (mounted) setState(() => error = 'Não foi possível adicionar a foto.');
+    }
+  }
+
+  Future<void> toggleRecording() async {
+    try {
+      if (recording) {
+        final recordedPath = await media.stopRecording();
+        if (mounted) {
+          setState(() {
+            recording = false;
+            audioPath = recordedPath;
+          });
+        }
+        return;
+      }
+      final started = await media.startRecording();
+      if (!mounted) return;
+      setState(() {
+        recording = started;
+        error = started ? null : 'Permita o acesso ao microfone para gravar.';
+      });
+    } on Object {
+      if (mounted) {
+        setState(() {
+          recording = false;
+          error = 'Não foi possível gravar o áudio.';
+        });
+      }
+    }
+  }
+
   void save() {
     if (title.text.trim().isEmpty) {
       setState(() => error = 'Dê um nome ao lembrete.');
+      return;
+    }
+    if (type == ReminderType.other && customType.text.trim().isEmpty) {
+      setState(() => error = 'Escreva qual é o tipo da atividade.');
+      return;
+    }
+    if (!daily && !scheduledAt.isAfter(DateTime.now())) {
+      setState(() => error = 'Escolha uma data e um horário futuros.');
+      return;
+    }
+    if (recording) {
+      setState(() => error = 'Finalize a gravação antes de salvar.');
       return;
     }
     widget.state.addReminder(
@@ -319,6 +445,11 @@ class _NewReminderScreenState extends State<NewReminderScreen> {
           ? 'Sem instrução adicional'
           : instructions.text.trim(),
       isDaily: daily,
+      scheduledDate: date,
+      photoPath: photoPath,
+      audioPath: audioPath,
+      customType: type == ReminderType.other ? customType.text.trim() : null,
+      alertMode: alertMode,
     );
     Navigator.pop(context);
   }
@@ -371,8 +502,24 @@ class _NewReminderScreenState extends State<NewReminderScreen> {
                 selected: type == ReminderType.meal,
                 onSelected: (_) => setState(() => type = ReminderType.meal),
               ),
+              ChoiceChip(
+                label: const Text('OUTRO'),
+                selected: type == ReminderType.other,
+                onSelected: (_) => setState(() => type = ReminderType.other),
+              ),
             ],
           ),
+          if (type == ReminderType.other) ...[
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('custom-reminder-type'),
+              controller: customType,
+              decoration: const InputDecoration(
+                labelText: 'Qual é o tipo da atividade?',
+                hintText: 'Ex.: Caminhada, banho, fisioterapia',
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           TextField(
             key: const Key('reminder-title'),
@@ -407,6 +554,25 @@ class _NewReminderScreenState extends State<NewReminderScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          InkWell(
+            key: const Key('reminder-date'),
+            borderRadius: BorderRadius.circular(14),
+            onTap: chooseDate,
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Dia',
+                suffixIcon: Icon(Icons.calendar_month_outlined),
+              ),
+              child: Text(
+                formattedDate,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text(
@@ -416,6 +582,50 @@ class _NewReminderScreenState extends State<NewReminderScreen> {
             value: daily,
             onChanged: (value) => setState(() => daily = value),
           ),
+          const SizedBox(height: 8),
+          const Text(
+            'COMO AVISAR O IDOSO',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppColors.muted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  key: const Key('alert-mode-alarm'),
+                  avatar: const Icon(Icons.alarm, size: 19),
+                  label: const Text('ALARME'),
+                  selected: alertMode == ReminderAlertMode.alarm,
+                  onSelected: (_) =>
+                      setState(() => alertMode = ReminderAlertMode.alarm),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ChoiceChip(
+                  key: const Key('alert-mode-notification'),
+                  avatar: const Icon(Icons.notifications_outlined, size: 19),
+                  label: const Text('NOTIFICAÇÃO'),
+                  selected: alertMode == ReminderAlertMode.notification,
+                  onSelected: (_) => setState(
+                    () => alertMode = ReminderAlertMode.notification,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            alertMode == ReminderAlertMode.alarm
+                ? 'Toca continuamente e aumenta temporariamente o volume.'
+                : 'Mostra um aviso comum com o som configurado no celular.',
+            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const SizedBox(height: 14),
           TextField(
             controller: instructions,
             minLines: 3,
@@ -425,6 +635,73 @@ class _NewReminderScreenState extends State<NewReminderScreen> {
               hintText: 'Ex.: 1 comprimido com água',
             ),
           ),
+          const SizedBox(height: 18),
+          const Text(
+            'FOTO OU MENSAGEM DE VOZ',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppColors.muted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('add-photo'),
+                  onPressed: choosePhoto,
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: Text(
+                    photoPath == null ? 'ADICIONAR FOTO' : 'TROCAR FOTO',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  key: const Key('record-audio'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: recording
+                        ? AppColors.red
+                        : AppColors.purple,
+                  ),
+                  onPressed: toggleRecording,
+                  icon: Icon(recording ? Icons.stop : Icons.mic_none),
+                  label: Text(
+                    recording
+                        ? 'PARAR'
+                        : audioPath == null
+                        ? 'GRAVAR ÁUDIO'
+                        : 'GRAVAR NOVO',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (photoPath != null) ...[
+            const SizedBox(height: 10),
+            ReminderPhotoAttachment(
+              path: photoPath!,
+              onRemove: () => setState(() => photoPath = null),
+            ),
+          ],
+          if (audioPath != null) ...[
+            const SizedBox(height: 10),
+            ListTile(
+              tileColor: const Color(0xFFEFEAFF),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              leading: const Icon(Icons.graphic_eq, color: AppColors.purple),
+              title: const Text('Mensagem de voz anexada'),
+              trailing: IconButton(
+                tooltip: 'Remover áudio',
+                onPressed: () => setState(() => audioPath = null),
+                icon: const Icon(Icons.close),
+              ),
+            ),
+          ],
           const SizedBox(height: 15),
           Container(
             padding: const EdgeInsets.all(14),
@@ -603,7 +880,7 @@ class _AlertCard extends StatelessWidget {
                 reminder.title,
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
-              Text('Horário: ${reminder.time}'),
+              Text('Quando: ${reminder.formattedDate} às ${reminder.time}'),
               const Text(
                 'Tempo sem confirmação: 35 min',
                 style: TextStyle(

@@ -8,8 +8,12 @@ import 'models.dart';
 import 'notification_service.dart';
 
 class AppState extends ChangeNotifier {
-  AppState({this.storage, this.notificationScheduler}) {
-    _seedDemoData();
+  AppState({
+    this.storage,
+    this.notificationScheduler,
+    bool seedDemoData = true,
+  }) {
+    if (seedDemoData) _seedDemoData();
   }
 
   final AppStorage? storage;
@@ -103,7 +107,7 @@ class AppState extends ChangeNotifier {
       try {
         _restore(jsonDecode(storedState) as Map<String, dynamic>);
       } on Object {
-        // Keep the safe demo state if local data is incomplete or corrupted.
+        // Keep the current safe state if local data is incomplete or corrupted.
       }
     }
     _initialized = true;
@@ -114,10 +118,6 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> flushPersistence() => _pendingSave;
-
-  Future<bool> showTestNotification() async {
-    return await notificationScheduler?.showTestNotification() ?? false;
-  }
 
   void _changed() {
     notifyListeners();
@@ -157,6 +157,11 @@ class AppState extends ChangeNotifier {
             'instructions': r.instructions,
             'createdBy': r.createdBy,
             'elderKey': r.elderKey,
+            'scheduledDate': r.scheduledDate?.toIso8601String(),
+            'photoPath': r.photoPath,
+            'audioPath': r.audioPath,
+            'customType': r.customType,
+            'alertMode': r.alertMode.name,
             'status': r.status.name,
             'isDaily': r.isDaily,
           },
@@ -210,6 +215,15 @@ class AppState extends ChangeNotifier {
             instructions: r['instructions'] as String,
             createdBy: r['createdBy'] as String,
             elderKey: r['elderKey'] as String?,
+            scheduledDate: r['scheduledDate'] == null
+                ? null
+                : DateTime.parse(r['scheduledDate'] as String),
+            photoPath: r['photoPath'] as String?,
+            audioPath: r['audioPath'] as String?,
+            customType: r['customType'] as String?,
+            alertMode: ReminderAlertMode.values.byName(
+              r['alertMode'] as String? ?? ReminderAlertMode.alarm.name,
+            ),
             status: ReminderStatus.values.byName(r['status'] as String),
             isDaily: r['isDaily'] as bool,
           ),
@@ -323,6 +337,9 @@ class AppState extends ChangeNotifier {
   int get unreadNotificationsCount {
     return notificationsForCurrentRole.where((n) => !n.isRead).length;
   }
+
+  CareReminder? reminderById(int id) =>
+      _allReminders.where((reminder) => reminder.id == id).firstOrNull;
 
   void markNotificationsAsRead() {
     for (final n in notificationsForCurrentRole) {
@@ -440,6 +457,11 @@ class AppState extends ChangeNotifier {
     required ReminderType type,
     required String instructions,
     required bool isDaily,
+    DateTime? scheduledDate,
+    String? photoPath,
+    String? audioPath,
+    String? customType,
+    ReminderAlertMode alertMode = ReminderAlertMode.alarm,
   }) {
     final newReminder = CareReminder(
       id: _nextId++,
@@ -449,6 +471,11 @@ class AppState extends ChangeNotifier {
       instructions: instructions,
       createdBy: currentAccount?.name ?? 'Familiar',
       elderKey: _currentElderKey,
+      scheduledDate: scheduledDate,
+      photoPath: photoPath,
+      audioPath: audioPath,
+      customType: customType,
+      alertMode: alertMode,
       isDaily: isDaily,
     );
     _allReminders.insert(0, newReminder);
@@ -500,9 +527,9 @@ class AppState extends ChangeNotifier {
         reminderId: reminder.id,
       ),
     );
-    if (!reminder.isDaily) {
-      final scheduler = notificationScheduler;
-      if (scheduler != null) unawaited(scheduler.cancel(reminder.id));
+    final scheduler = notificationScheduler;
+    if (scheduler != null) {
+      unawaited(_stopAlarmAndPrepareNext(reminder, scheduler));
     }
     _changed();
   }
@@ -521,6 +548,10 @@ class AppState extends ChangeNotifier {
         reminderId: reminder.id,
       ),
     );
+    final scheduler = notificationScheduler;
+    if (scheduler != null) {
+      unawaited(scheduler.scheduleAfter(reminder, const Duration(minutes: 10)));
+    }
     _changed();
   }
 
@@ -538,11 +569,19 @@ class AppState extends ChangeNotifier {
         reminderId: reminder.id,
       ),
     );
-    if (!reminder.isDaily) {
-      final scheduler = notificationScheduler;
-      if (scheduler != null) unawaited(scheduler.cancel(reminder.id));
+    final scheduler = notificationScheduler;
+    if (scheduler != null) {
+      unawaited(_stopAlarmAndPrepareNext(reminder, scheduler));
     }
     _changed();
+  }
+
+  Future<void> _stopAlarmAndPrepareNext(
+    CareReminder reminder,
+    ReminderNotificationScheduler scheduler,
+  ) async {
+    await scheduler.cancel(reminder.id);
+    if (reminder.isDaily) await scheduler.schedule(reminder);
   }
 
   void setTextScale(double value) {

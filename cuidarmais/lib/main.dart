@@ -16,15 +16,22 @@ Future<void> main() async {
   final state = AppState(
     storage: SharedPreferencesAppStorage(),
     notificationScheduler: notificationService,
+    seedDemoData: false,
   );
   await state.initialize();
-  runApp(MyApp(state: state));
+  runApp(
+    MyApp(
+      state: state,
+      notificationSelection: notificationService.selectedReminderId,
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, this.state});
+  const MyApp({super.key, this.state, this.notificationSelection});
 
   final AppState? state;
+  final ValueNotifier<int?>? notificationSelection;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -32,17 +39,50 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late final AppState state;
+  final navigatorKey = GlobalKey<NavigatorState>();
+  int? _openingReminderId;
 
   @override
   void initState() {
     super.initState();
     state = widget.state ?? AppState();
+    state.addListener(_openSelectedReminder);
+    widget.notificationSelection?.addListener(_openSelectedReminder);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _openSelectedReminder(),
+    );
   }
 
   @override
   void dispose() {
+    state.removeListener(_openSelectedReminder);
+    widget.notificationSelection?.removeListener(_openSelectedReminder);
     state.dispose();
     super.dispose();
+  }
+
+  void _openSelectedReminder() {
+    final selected = widget.notificationSelection;
+    final reminderId = selected?.value;
+    if (reminderId == null ||
+        reminderId == _openingReminderId ||
+        state.currentAccount == null) {
+      return;
+    }
+    final reminder = state.reminderById(reminderId);
+    if (reminder == null) return;
+    _openingReminderId = reminderId;
+    selected!.value = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      navigatorKey.currentState
+          ?.push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  ReminderDetailScreen(state: state, reminder: reminder),
+            ),
+          )
+          .whenComplete(() => _openingReminderId = null);
+    });
   }
 
   @override
@@ -52,6 +92,7 @@ class _MyAppState extends State<MyApp> {
       builder: (context, _) {
         final account = state.currentAccount;
         return MaterialApp(
+          navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           title: 'Cuidar+',
           theme: buildTheme(
@@ -74,5 +115,3 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
-
-//teste

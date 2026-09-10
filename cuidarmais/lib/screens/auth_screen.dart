@@ -37,31 +37,12 @@ class _AuthScreenState extends State<AuthScreen> {
           padding: const EdgeInsets.fromLTRB(28, 42, 28, 24),
           child: Column(
             children: [
-              Container(
-                width: 84,
-                height: 84,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEFEAFF),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  '+',
-                  style: TextStyle(
-                    fontSize: 38,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.purple,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'Cuidar+',
-                style: TextStyle(
-                  fontSize: 31,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.purple,
-                ),
+              Image.asset(
+                'assets/images/logo.png',
+                key: const Key('app-logo'),
+                width: 220,
+                height: 190,
+                fit: BoxFit.contain,
               ),
               const Text(
                 'Cuidado simples, perto de quem importa.',

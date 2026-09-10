@@ -136,7 +136,8 @@ void main() {
   );
 
   test('postponing reminder generates caregiver notification alert', () {
-    final state = AppState();
+    final scheduler = _RecordingNotificationScheduler();
+    final state = AppState(notificationScheduler: scheduler);
     state.signIn('maria@cuidar.app', '123456');
 
     final reminder = state.reminders.first;
@@ -148,6 +149,7 @@ void main() {
         .toList();
     expect(caregiverNotifications, isNotEmpty);
     expect(caregiverNotifications.first.title, 'Lembrete adiado');
+    expect(scheduler.postponed.single.$2, const Duration(minutes: 10));
   });
 
   test('notifications stay scoped to the elder connected by the code', () {
@@ -187,16 +189,23 @@ void main() {
     state.signIn('romulo@cuidar.app', '123456');
 
     state.addReminder(
-      title: 'Tomar vitamina',
+      title: 'Alongamento',
       time: '18:30',
-      type: ReminderType.medicine,
+      type: ReminderType.other,
+      customType: 'Fisioterapia',
+      alertMode: ReminderAlertMode.notification,
       instructions: 'Depois do jantar',
       isDaily: true,
     );
 
-    expect(scheduler.scheduled.single.title, 'Tomar vitamina');
+    expect(scheduler.scheduled.single.title, 'Alongamento');
     expect(scheduler.scheduled.single.time, '18:30');
     expect(scheduler.scheduled.single.isDaily, isTrue);
+    expect(scheduler.scheduled.single.typeLabel, 'Fisioterapia');
+    expect(
+      scheduler.scheduled.single.alertMode,
+      ReminderAlertMode.notification,
+    );
   });
 
   test('accessibility settings state updates correctly', () {
@@ -246,9 +255,14 @@ void main() {
       secondRun.addReminder(
         title: 'Beber água',
         time: '11:00',
-        type: ReminderType.activity,
+        type: ReminderType.other,
         instructions: 'Um copo',
         isDaily: true,
+        scheduledDate: DateTime(2027, 2, 12),
+        photoPath: '/dados/foto.jpg',
+        audioPath: '/dados/voz.m4a',
+        customType: 'Hidratação',
+        alertMode: ReminderAlertMode.notification,
       );
       await secondRun.flushPersistence();
 
@@ -257,6 +271,14 @@ void main() {
       thirdRun.signOut();
       expect(thirdRun.signIn('helena@teste.com', 'abcdef'), isNull);
       expect(thirdRun.reminders.single.title, 'Beber água');
+      expect(thirdRun.reminders.single.scheduledDate, DateTime(2027, 2, 12));
+      expect(thirdRun.reminders.single.photoPath, '/dados/foto.jpg');
+      expect(thirdRun.reminders.single.audioPath, '/dados/voz.m4a');
+      expect(thirdRun.reminders.single.customType, 'Hidratação');
+      expect(
+        thirdRun.reminders.single.alertMode,
+        ReminderAlertMode.notification,
+      );
       expect(
         thirdRun.notificationsForCurrentRole.single.title,
         'Novo lembrete',
@@ -279,6 +301,8 @@ class _MemoryStorage implements AppStorage {
 
 class _RecordingNotificationScheduler implements ReminderNotificationScheduler {
   final List<CareReminder> scheduled = [];
+  final List<(CareReminder, Duration)> postponed = [];
+  final List<CareReminder> rescheduled = [];
 
   @override
   Future<void> schedule(CareReminder reminder) async {
@@ -289,14 +313,18 @@ class _RecordingNotificationScheduler implements ReminderNotificationScheduler {
   Future<void> cancel(int reminderId) async {}
 
   @override
+  Future<void> scheduleAfter(CareReminder reminder, Duration delay) async {
+    postponed.add((reminder, delay));
+  }
+
+  @override
   Future<void> initialize() async {}
 
   @override
   Future<bool> requestPermissions() async => true;
 
   @override
-  Future<void> rescheduleAll(Iterable<CareReminder> reminders) async {}
-
-  @override
-  Future<bool> showTestNotification() async => true;
+  Future<void> rescheduleAll(Iterable<CareReminder> reminders) async {
+    rescheduled.addAll(reminders);
+  }
 }
