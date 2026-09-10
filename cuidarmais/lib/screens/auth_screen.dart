@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
+import 'community_activities_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key, required this.state});
@@ -44,11 +45,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 height: 190,
                 fit: BoxFit.contain,
               ),
-              const Text(
-                'Cuidado simples, perto de quem importa.',
-                style: TextStyle(color: AppColors.muted, fontSize: 15),
-              ),
-              const SizedBox(height: 38),
+              const SizedBox(height: 20),
               TextField(
                 key: const Key('login-contact'),
                 controller: contact,
@@ -99,13 +96,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 onPressed: signIn,
                 child: const Text('ENTRAR NA MINHA CONTA'),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'O app detecta automaticamente se é idoso ou familiar.',
-                style: TextStyle(color: AppColors.muted, fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 13),
+              const SizedBox(height: 16),
               OutlinedButton(
                 onPressed: () => _showMessage(
                   context,
@@ -129,6 +120,19 @@ class _AuthScreenState extends State<AuthScreen> {
                   'Primeiro acesso? Criar minha conta',
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
+              ),
+              const Divider(height: 30),
+              TextButton.icon(
+                key: const Key('institution-entry'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => InstitutionActivitySubmissionScreen(
+                      state: widget.state,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.apartment_outlined),
+                label: const Text('Sou uma instituição'),
               ),
             ],
           ),

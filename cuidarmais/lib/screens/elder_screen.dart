@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
+import 'community_activities_screen.dart';
 import 'notifications_screen.dart';
 import 'reminder_media_widgets.dart';
 import 'settings_screen.dart';
@@ -174,6 +175,22 @@ class ElderHomeScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => CommitmentsScreen(state: state),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              _HomeAction(
+                key: const Key('community-activities'),
+                color: const Color(0xFFFFDFA8),
+                iconColor: const Color(0xFFD77A18),
+                icon: '✦',
+                eyebrow: 'Convivência em Concórdia',
+                title: 'Encontrar atividades',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CommunityActivitiesScreen(state: state),
                   ),
                 ),
               ),

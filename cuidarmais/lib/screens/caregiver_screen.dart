@@ -7,6 +7,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../reminder_media_service.dart';
 import '../theme.dart';
+import 'community_activities_screen.dart';
 import 'notifications_screen.dart';
 import 'reminder_media_widgets.dart';
 import 'settings_screen.dart';
@@ -161,6 +162,20 @@ class CaregiverHomeScreen extends StatelessWidget {
                   ),
                 ),
             const SizedBox(height: 8),
+            FilledButton.icon(
+              key: const Key('community-activities'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFD77A18),
+              ),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CommunityActivitiesScreen(state: state),
+                ),
+              ),
+              icon: const Icon(Icons.groups_outlined),
+              label: const Text('ENCONTRAR ATIVIDADES'),
+            ),
+            const SizedBox(height: 10),
             FilledButton.icon(
               key: const Key('add-reminder'),
               style: FilledButton.styleFrom(

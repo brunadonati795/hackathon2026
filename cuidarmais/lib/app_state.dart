@@ -74,6 +74,7 @@ class AppState extends ChangeNotifier {
 
   final List<Account> _accounts = [];
   final List<CareReminder> _allReminders = [];
+  final List<ActivitySubmission> activitySubmissions = [];
 
   /// Returns reminders scoped to the current account's linked elder.
   List<CareReminder> get reminders {
@@ -98,6 +99,7 @@ class AppState extends ChangeNotifier {
   int _nextId = 4;
   int _nextNotifId = 1;
   int _nextLinkCode = 1000;
+  int _nextSubmissionId = 1;
   final Set<String> _issuedLinkKeys = {};
 
   Future<void> initialize() async {
@@ -161,9 +163,25 @@ class AppState extends ChangeNotifier {
             'photoPath': r.photoPath,
             'audioPath': r.audioPath,
             'customType': r.customType,
+            'communityActivityId': r.communityActivityId,
             'alertMode': r.alertMode.name,
             'status': r.status.name,
             'isDaily': r.isDaily,
+          },
+        )
+        .toList(),
+    'activitySubmissions': activitySubmissions
+        .map(
+          (submission) => {
+            'id': submission.id,
+            'organizer': submission.organizer,
+            'contact': submission.contact,
+            'title': submission.title,
+            'schedule': submission.schedule,
+            'address': submission.address,
+            'description': submission.description,
+            'submittedAt': submission.submittedAt.toIso8601String(),
+            'status': submission.status.name,
           },
         )
         .toList(),
@@ -188,6 +206,7 @@ class AppState extends ChangeNotifier {
     'nextId': _nextId,
     'nextNotifId': _nextNotifId,
     'nextLinkCode': _nextLinkCode,
+    'nextSubmissionId': _nextSubmissionId,
   };
 
   void _restore(Map<String, dynamic> data) {
@@ -221,6 +240,7 @@ class AppState extends ChangeNotifier {
             photoPath: r['photoPath'] as String?,
             audioPath: r['audioPath'] as String?,
             customType: r['customType'] as String?,
+            communityActivityId: r['communityActivityId'] as String?,
             alertMode: ReminderAlertMode.values.byName(
               r['alertMode'] as String? ?? ReminderAlertMode.alarm.name,
             ),
@@ -229,6 +249,27 @@ class AppState extends ChangeNotifier {
           ),
         )
         .toList();
+    final restoredSubmissions =
+        ((data['activitySubmissions'] as List<dynamic>?) ?? const [])
+            .cast<Map<String, dynamic>>()
+            .map(
+              (submission) => ActivitySubmission(
+                id: submission['id'] as int,
+                organizer: submission['organizer'] as String,
+                contact: submission['contact'] as String,
+                title: submission['title'] as String,
+                schedule: submission['schedule'] as String,
+                address: submission['address'] as String,
+                description: submission['description'] as String,
+                submittedAt: DateTime.parse(
+                  submission['submittedAt'] as String,
+                ),
+                status: ActivitySubmissionStatus.values.byName(
+                  submission['status'] as String,
+                ),
+              ),
+            )
+            .toList();
     final restoredNotifications = (data['notifications'] as List<dynamic>)
         .cast<Map<String, dynamic>>()
         .map(
@@ -254,6 +295,9 @@ class AppState extends ChangeNotifier {
     notifications
       ..clear()
       ..addAll(restoredNotifications);
+    activitySubmissions
+      ..clear()
+      ..addAll(restoredSubmissions);
     final currentContact = data['currentContact'] as String?;
     currentAccount = _accounts
         .where((a) => a.contact == currentContact)
@@ -264,6 +308,7 @@ class AppState extends ChangeNotifier {
     _nextId = data['nextId'] as int;
     _nextNotifId = data['nextNotifId'] as int;
     _nextLinkCode = data['nextLinkCode'] as int;
+    _nextSubmissionId = data['nextSubmissionId'] as int? ?? 1;
   }
 
   String generateUniqueLinkKey() {
@@ -461,6 +506,7 @@ class AppState extends ChangeNotifier {
     String? photoPath,
     String? audioPath,
     String? customType,
+    String? communityActivityId,
     ReminderAlertMode alertMode = ReminderAlertMode.alarm,
   }) {
     final newReminder = CareReminder(
@@ -475,6 +521,7 @@ class AppState extends ChangeNotifier {
       photoPath: photoPath,
       audioPath: audioPath,
       customType: customType,
+      communityActivityId: communityActivityId,
       alertMode: alertMode,
       isDaily: isDaily,
     );
@@ -510,6 +557,58 @@ class AppState extends ChangeNotifier {
       unawaited(scheduler.schedule(newReminder));
     }
     _changed();
+  }
+
+  bool hasCommunityActivityReminder(String activityId) => reminders.any(
+    (reminder) =>
+        reminder.communityActivityId == activityId &&
+        (reminder.status == ReminderStatus.pending ||
+            reminder.status == ReminderStatus.delayed),
+  );
+
+  bool addCommunityActivityReminder(
+    CommunityActivity activity, {
+    ReminderAlertMode alertMode = ReminderAlertMode.notification,
+    DateTime? now,
+  }) {
+    if (hasCommunityActivityReminder(activity.id)) return false;
+    final occurrence = activity.nextOccurrence(now);
+    if (occurrence == null) return false;
+    addReminder(
+      title: activity.title,
+      time:
+          '${occurrence.hour.toString().padLeft(2, '0')}:${occurrence.minute.toString().padLeft(2, '0')}',
+      type: ReminderType.activity,
+      instructions: '${activity.organizer} — ${activity.address}',
+      isDaily: false,
+      scheduledDate: occurrence,
+      alertMode: alertMode,
+      communityActivityId: activity.id,
+    );
+    return true;
+  }
+
+  String submitCommunityActivity({
+    required String organizer,
+    required String contact,
+    required String title,
+    required String schedule,
+    required String address,
+    required String description,
+  }) {
+    final submission = ActivitySubmission(
+      id: _nextSubmissionId++,
+      organizer: organizer.trim(),
+      contact: contact.trim(),
+      title: title.trim(),
+      schedule: schedule.trim(),
+      address: address.trim(),
+      description: description.trim(),
+      submittedAt: DateTime.now(),
+    );
+    activitySubmissions.insert(0, submission);
+    _changed();
+    return submission.protocol;
   }
 
   void confirm(CareReminder reminder) {

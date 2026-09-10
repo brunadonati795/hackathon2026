@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cuidarmais/app_state.dart';
 import 'package:cuidarmais/main.dart';
 import 'package:cuidarmais/models.dart';
+import 'package:cuidarmais/screens/community_activities_screen.dart';
 import 'package:cuidarmais/screens/elder_screen.dart';
 import 'package:cuidarmais/screens/settings_screen.dart';
 import 'package:cuidarmais/theme.dart';
@@ -28,14 +29,126 @@ void main() {
       await tester.tap(find.byKey(const Key('sign-in-elder')));
       await tester.pumpAndSettle();
       expect(find.text('Olá, Maria!'), findsOneWidget);
-      expect(find.text('Falar com familiar'), findsOneWidget);
       expect(find.byKey(const Key('settings-button')), findsOneWidget);
-      await tester.drag(find.byType(ListView).first, const Offset(0, -420));
+      await tester.drag(find.byType(ListView).first, const Offset(0, -360));
+      await tester.pumpAndSettle();
+      expect(find.text('Falar com familiar'), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -320));
       await tester.pumpAndSettle();
       expect(find.text('Seu Código de Conexão'), findsOneWidget);
       expect(find.text('MARIA2026'), findsOneWidget);
     },
   );
+
+  testWidgets('elder adds a verified community activity to the agenda', (
+    tester,
+  ) async {
+    final state = AppState();
+    state.signIn('maria@cuidar.app', '123456');
+    await tester.pumpWidget(MyApp(state: state));
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('community-activities')),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final activitiesTapTarget = find.descendant(
+      of: find.byKey(const Key('community-activities')),
+      matching: find.byType(InkWell),
+    );
+    tester.widget<InkWell>(activitiesTapTarget).onTap!();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CommunityActivitiesScreen), findsOneWidget);
+    expect(find.text('Conecta 60+'), findsOneWidget);
+    await tester.tap(
+      find.byKey(
+        const Key('community-activity-sesc-conecta-60-concordia-2026'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(CommunityActivityDetailScreen), findsOneWidget);
+
+    await tester.drag(find.byType(ListView).last, const Offset(0, -420));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-activity-to-agenda')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('activity-reminder-notification')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Atividade adicionada à agenda.'), findsOneWidget);
+    expect(
+      state.reminders.where((reminder) => reminder.title == 'Conecta 60+'),
+      hasLength(1),
+    );
+  });
+
+  testWidgets('institution submits an activity for verification', (
+    tester,
+  ) async {
+    final state = AppState();
+    await tester.pumpWidget(MyApp(state: state));
+    await tester.ensureVisible(find.byKey(const Key('institution-entry')));
+    await tester.tap(find.byKey(const Key('institution-entry')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('submission-organizer')),
+      'Associação Comunitária',
+    );
+    await tester.enterText(
+      find.byKey(const Key('submission-contact')),
+      '(49) 99999-0000',
+    );
+    await tester.enterText(
+      find.byKey(const Key('submission-title')),
+      'Oficina de artesanato',
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('submission-schedule')),
+      220,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.enterText(
+      find.byKey(const Key('submission-schedule')),
+      'Quartas, às 14h',
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('submission-address')),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.enterText(
+      find.byKey(const Key('submission-address')),
+      'Rua Central, 100',
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('submission-description')),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.enterText(
+      find.byKey(const Key('submission-description')),
+      'Atividade gratuita e acessível.',
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('submit-institution-activity')),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final submitButton = tester.widget<FilledButton>(
+      find.byKey(const Key('submit-institution-activity')),
+    );
+    submitButton.onPressed!();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('activity-submission-protocol')),
+      findsOneWidget,
+    );
+    expect(find.text('Protocolo CM-0001'), findsOneWidget);
+    expect(state.activitySubmissions.single.title, 'Oficina de artesanato');
+  });
 
   testWidgets('elder can open and read a received notification', (
     tester,
@@ -163,6 +276,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Olá, Joana!'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Seu Código de Conexão'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Seu Código de Conexão'), findsOneWidget);
     expect(find.byKey(const Key('empty-reminders')), findsOneWidget);
   });
