@@ -38,7 +38,7 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             children: [
               Image.asset(
-                'assets/images/logo.png',
+                'assets/imagens/logo.png',
                 key: const Key('app-logo'),
                 width: 220,
                 height: 190,

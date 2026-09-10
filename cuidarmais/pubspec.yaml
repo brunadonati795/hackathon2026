@@ -69,7 +69,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/logo.png
+    - assets/imagens/logo.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -105,20 +105,20 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/images/logo.png
+  image_path: assets/imagens/logo.png
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: assets/images/logo.png
+  adaptive_icon_foreground: assets/imagens/logo.png
   adaptive_icon_foreground_inset: 12
   remove_alpha_ios: true
   web:
     generate: true
-    image_path: assets/images/logo.png
+    image_path: assets/imagens/logo.png
     background_color: "#FFFFFF"
     theme_color: "#6C52B8"
   windows:
     generate: true
-    image_path: assets/images/logo.png
+    image_path: assets/imagens/logo.png
     icon_size: 256
   macos:
     generate: true
-    image_path: assets/images/logo.png
+    image_path: assets/imagens/logo.png
